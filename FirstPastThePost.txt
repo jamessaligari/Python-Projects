@@ -1,0 +1,31 @@
+###############################################################################
+
+DATA: First Past The Post Voting Scheme
+
+###############################################################################
+
+
+from collections import defaultdict
+
+def first_past_the_post(votes):
+    ''' 
+    Finds the winner of a single-preference voting scheme. Takes an input list
+    of votes and uses a default dictionary to count votes for each candidate.
+    Returns the outcome of the election as a string containing the unique
+    winner or tie.
+    '''
+    # Initialize Dictionary. Count first preferences.
+    vote_tally = defaultdict(int)
+    for vote in votes:
+        vote_tally[vote] += 1
+    
+    # Check for winner. Return unique winner/tie. <max_v> contains max. no. 
+    # of votes to test candidates against.
+    max_v = max(vote_tally.values())
+    # When index[-1] == index[-2] there is > 1 occurrence of max_votes - tie.
+    if sorted(vote_tally.values())[-1] == sorted(vote_tally.values())[-2]:
+        return 'tie'
+    else:
+        return [candidate for candidate, votes in vote_tally.items() if 
+                votes == max_v][0]
+    

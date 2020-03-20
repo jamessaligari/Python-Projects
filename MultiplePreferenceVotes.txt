@@ -1,0 +1,79 @@
+########################################################
+
+DATA: MultiplePreferenceVotes
+
+########################################################
+
+from collections import defaultdict
+
+def multiple_preference(votes):
+    '''
+    Finds the outcome of an election involving multiple preferences. Takes an
+    input list of votes and uses a defaultdictionary <vote_tally> to track
+    vote counts. Calls <reallocate_votes> to check and account for no abs
+    majority. Calls <find_winner> to return a string of the outcome of the 
+    election.
+    '''
+    # Initialize DefaultDict & Count First Preferences
+    vote_tally = defaultdict(int)
+    # Set <valid_candidates> keeps track of preferences able to be 'counted.'
+    valid_candidates = {preference for vote in votes for preference in vote}
+    
+    # Initialize keys for all candidates and count first preferences.
+    for candidate in valid_candidates:
+        vote_tally[candidate] = 0
+    for vote in votes:
+        vote_tally[vote[0]] += 1
+    
+    # Reallocate votes if no abs majority and > 2 candidates
+    vote_tally = reallocate_votes(vote_tally, votes, valid_candidates)
+
+    return find_winner(vote_tally)
+
+def reallocate_votes(vote_tally, votes, valid_candidates):
+    '''
+    Takes input dictionary vote_tally, list, votes and set, valid_candidates.
+    Reallocates the votes of the lowest-vote candidate while there is no abs
+    majority and > 2 candidates remain. Set <valid_candidates> ensures that 
+    eliminated candidates do not have their preferences counted in subsequent
+    iterations. Returns an updated dictionary, vote_tally, containing the final
+    vote counts after an absolute majority or tie has emerged. 
+    '''
+    # Reallocate votes until abs majority emerges or only two candidates remain
+    while max(vote_tally.values()) <= len(votes) / 2 and len(vote_tally) > 2:
+        loser = sorted(vote_tally.items(), key=switch_sort)[0][0]
+        to_reallocate = [vote[1:] for vote in votes if vote[0] == loser]
+        for vote in to_reallocate:
+            for preference in vote:
+                if preference in valid_candidates:
+                    vote_tally[preference] += 1
+                    break
+        
+        # Delete current loser to allow subsequent reassignment. Remove loser
+        # from candidates still in consideration.
+        del vote_tally[loser]
+        valid_candidates.remove(loser)
+        
+    return vote_tally
+
+def switch_sort(tup):
+    ''' 
+    Takes a tuple (candidate, votes) and returns a reordered tuple. Intended to
+    be used for sorting by votes then candidate.
+    '''
+    return tup[1], tup[0]
+
+def find_winner(vote_tally):
+    '''
+    Takes the final version of dictionary vote_tally and returns a string 
+    containing the unique winner or a string 'tie' if there is more than one
+    winner. 
+    '''
+    # Check for winner w/ max no. of votes (max_v). Return unique winner/tie.
+    max_v = max(vote_tally.values()) 
+    # When Val[-1] == Val[-2] there is > 1 occurrence of max_votes
+    if sorted(vote_tally.values())[-1] == sorted(vote_tally.values())[-2]:
+        return 'tie'
+    else:
+        return [candidate for candidate, votes in vote_tally.items() 
+                if votes == max_v][0] 

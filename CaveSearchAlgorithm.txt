@@ -1,0 +1,434 @@
+#######################################################################################################
+
+DATA: Cave Search Algorithm
+
+#######################################################################################################
+
+MAX_TREASURES = 3
+
+def build_cave(data):
+    ''' 
+    The function <build_cave()> takes a dictionary as input, which contains 
+    the tuple locations of features in the cave, including: treasures, sword, 
+    dragon, entrance and exit. The function translates this input into a 
+    two-dimensional representation of a 'cave' as a list of lists, where each
+    list is a 'row.'
+    '''
+    # Check the data for invalid characteristics, including: no entrance/exit, 
+    # multiple swords/dragons, invalid 'types' as entry.
+    if 'entrance' not in data.keys() or 'exit' not in data.keys():
+        return None
+    elif type(data['entrance']) == list or type(data['exit']) == list:
+        return None
+    elif 'sword' in data.keys() and type(data['sword']) == list:
+        return None
+    elif 'dragon' in data.keys() and type(data['dragon']) == list:
+        return None
+    elif 'treasure' in data.keys() and len(data['treasure']) > MAX_TREASURES:
+        return None
+    # Function <test_coordinates()> is called to ensure that all parameters of 
+    # data are valid.
+    elif not test_coordinates(data):
+        return None
+    # Function <test_for_adjacent_dragon()> checks whether the entrance is
+    # invalidly located in a position around (8 squares) the dragon.
+    elif test_for_adjacent_dragon(data):
+        return None
+    # Generate a map of nested lists for the given size
+    else:
+        usr_map = [[] for in_size in range(0, data['size'])]
+        
+    # Insert given elements in given locations, if present.
+    for row in range(len(usr_map)):
+        for in_size in range(data['size']):
+            if (row, in_size) == data['entrance']:
+                usr_map[row].append('@')
+            elif (row, in_size) == data['exit']:
+                usr_map[row].append('X')
+            elif 'walls' in data.keys() and (row, in_size) in data['walls']:
+                usr_map[row].append('#')
+            elif 'sword' in data.keys() and (row, in_size) == data['sword']:
+                usr_map[row].append('t')
+            elif ('treasure' in data.keys() and (row, in_size) 
+                in data['treasure']):
+                usr_map[row].append('$')
+            elif ('dragon' in data.keys() and 
+                  (row, in_size) == data['dragon']):
+                usr_map[row].append('W')
+            # Insert '.' to represent 'empty' locations
+            else:
+                usr_map[row].append('.')
+                
+    return usr_map
+            
+def test_coordinates(data):
+    '''
+    This function ensures that the values of keys 'treasure' and 'walls' are 
+    stored in a list, that the values of ALL other keys are in tuple, i.e.
+    coordinate form, and that there are no repeating coordinates. Returns True
+    if none of these conditions are violated, and False otherwise.
+    '''
+    all_coordinates = []
+    if 'treasure' in data.keys():
+        all_coordinates += [tup for tup in data['treasure']]
+    if 'walls' in data.keys():
+        all_coordinates += [tup for tup in data['walls']]
+    for tup in data.values():
+        if type(tup) == tuple:
+            all_coordinates.append(tup) 
+            
+    # Test for non-repeating coordinates
+    valid_coordinates = []
+    for tup in all_coordinates:
+        if tup not in valid_coordinates:
+            valid_coordinates.append(tup)
+        else:
+            return False
+       
+    # Test for coordinates not within the range of the input size
+    for tup in all_coordinates:
+        for item in tup:
+            if item not in range(data['size']):
+                return False
+    
+    return True
+
+def test_for_adjacent_dragon(data):
+    '''
+    This function takes the dictionary data as input and tests for an invalid
+    location for the dragon. An invalid location is defined as one adjacent
+    to the entrance (8 squares). Returns True if there is an invalid location.
+    '''
+    # Generate and test for adjacent locations in invalid positions.
+    if 'dragon' in data.keys():
+        dragon_location = data['dragon']
+        entrance_location = data['entrance']
+        
+        # Adajcent locations are within the 8 squares around the dragon
+        banned_1 = (dragon_location[0], dragon_location[1] + 1)
+        banned_2 = (dragon_location[0], dragon_location[1] - 1)    
+        banned_3 = (dragon_location[0] + 1, dragon_location[1])
+        banned_4 = (dragon_location[0] + 1, dragon_location[1] - 1)
+        banned_5 = (dragon_location[0] + 1, dragon_location[1] + 1)
+        banned_6 = (dragon_location[0] - 1, dragon_location[1])
+        banned_7 = (dragon_location[0] - 1, dragon_location[1] - 1)    
+        banned_8 = (dragon_location[0] - 1, dragon_location[1] + 1)
+
+        adjacent_locations = [banned_1, banned_2, banned_3, banned_4, banned_5, 
+                             banned_6, banned_7, banned_8]
+
+        
+        # Test for invalid dragon location within 8-square bound of entrance
+        if entrance_location in adjacent_locations:
+            return True
+        else:
+            return False
+
+###################################################################################
+
+
+from reference import build_cave
+
+def check_path(data, path):
+    '''
+    This function checks whether a path is valid. Valid paths begin at the 
+    entrance and finish at the exit with all treasures. Valid paths do
+    not enter locations adjacent to the dragon without the sword or locations
+    with 'walls' or locations outside the map bounds. Takes an input dictionary
+    <data> containing the parameters for the cave and an input list of moves
+    - N, S, E, W - <path>. Returns True if it is a valid path, for the given 
+    data, and False otherwise.
+    '''
+    # Initialize incrementers used to generate locations explored by the path.
+    start_index = list(data['entrance'])
+    curr_index = start_index
+    explored_positions = [start_index, ]
+
+    # Append new locations to explored_positions according to the given path.
+    for direction in path:
+        if direction == 'N':
+            explored_positions.append([curr_index[0] - 1, curr_index[1]])
+            curr_index = explored_positions[-1]
+
+        elif direction == 'S':
+            explored_positions.append([curr_index[0] + 1, curr_index[1]])
+            curr_index = explored_positions[-1]
+
+        elif direction == 'E':
+            explored_positions.append([curr_index[0], curr_index[1] + 1])
+            curr_index = explored_positions[-1]
+
+        elif direction == 'W':
+            explored_positions.append([curr_index[0], curr_index[1] - 1])
+            curr_index = explored_positions[-1]
+    
+    # Initialize banned (w/out sword) locations adjacent to dragon
+    dragon_location = data['dragon']
+
+    banned_1 = [dragon_location[0], dragon_location[1] + 1]
+    banned_2 = [dragon_location[0], dragon_location[1] - 1]    
+    banned_3 = [dragon_location[0] + 1, dragon_location[1]]
+    banned_4 = [dragon_location[0] + 1, dragon_location[1] - 1]
+    banned_5 = [dragon_location[0] + 1, dragon_location[1] + 1]
+    banned_6 = [dragon_location[0] - 1, dragon_location[1]]
+    banned_7 = [dragon_location[0] - 1, dragon_location[1] - 1] 
+    banned_8 = [dragon_location[0] - 1, dragon_location[1] + 1]
+
+    adjacent_locations = [banned_1, banned_2, banned_3, banned_4, banned_5, 
+                         banned_6, banned_7, banned_8]
+    
+
+    # Checking validity of all explored positions
+    for i in range(len(explored_positions)):
+        if (explored_positions[i][0] not in range(data['size']) and 
+            explored_positions[i][1] not in range(data['size'])):
+            return False
+        elif explored_positions[i] in data['walls']:
+            return False
+        elif tuple(explored_positions[i]) in data['dragon']:
+            if ('sword' in data and list(data['sword']) not
+            in explored_positions[:i]):
+                return False
+        elif explored_positions[i] in adjacent_locations:
+            if ('sword' in data and list(data['sword']) not 
+            in explored_positions[:i]):
+                return False
+        elif tuple(explored_positions[-1]) != data['exit']:
+            return False
+        # Function <no_diagonal_moves()> is called to ensure all moves are
+        # linear in nature.
+        elif not no_diagonal_moves(explored_positions, data):
+            return False
+        # Check if all treasures have been collected.
+        elif not check_for_treasures(data, explored_positions):
+            return False
+    return True
+        
+def no_diagonal_moves(explored_positions, data):
+    ''' 
+    This function tests whether any 'moves' in the list of tuples, explored
+    positions, are diagonal; that is, if both row and col are different
+    to the preceding position. Returns False if this is the case and True 
+    otherwise.
+    '''
+    for i in range(len(explored_positions)):
+        if explored_positions[i] != data['entrance']:
+            (row, col) = explored_positions[i - 1]
+            diagonal_moves = [(row - 1, col - 1), (row - 1, col + 1),
+                               (row + 1, col - 1), (row + 1, col + 1)]
+            if explored_positions[i] in diagonal_moves:
+                return False
+    return True
+
+def check_for_treasures(data, explored_positions):
+    ''' Checks if all treasures have been collected along the specified path
+    of locations mappedo out by the list of tuples, explored positions. Takes
+    the data dictionary as input in order to locate the treasures. Returns
+    True if all treasures are collected and False otherwise. '''
+    # Check for all treasures in the path
+    if 'treasure' in data:
+        for treasure in data['treasure']:
+            if list(treasure) not in explored_positions:
+                return False
+    return True
+                    
+
+#####################################################################################
+
+
+from reference import build_cave
+
+def shortest_path(data, start, end, has_sword):
+    '''
+    Function <shortest_path()> takes inputs: data, a dictionary containing
+    the features and coordinates of the cave, start, the tuple coordinates of 
+    the start of the path, end, the tuple coordinates of the end of the path, 
+    and has_sword, a boolean variable that is True if Falca has the sword and 
+    False otherwwise. The function uses these inputs and helper functions 
+    generate_possible_moves(), and valid_move(), which respectively generate 
+    and ensure validity of moves from the current node, to find the shortest 
+    path between two points (start, end). Returns the length of this shortest
+    path.
+    '''
+    # Check for valid cave
+    if not build_cave(data):
+        return None
+    # Initialize path-finder variables: the starting node, queue and a set of 
+    # visited locations.
+    node = (start, 0)
+    unexplored = [node, ]
+    explored = set()
+    
+    # Iterate until a solution is found or failure.
+    while True:
+        # Return failure if no path reaches the exit.
+        if not unexplored:
+            return None
+        node = unexplored[0]
+        unexplored.pop(0)
+        # Return the shortest path's length if the node is the specified end.
+        if node[0] == end:
+            return node[1]
+
+        # Add novel valid moves (unexplored) from the current node to queue 
+        # of unexplored locations and mark the current node as explored.
+        explored.add(node)
+        possible_moves = generate_possible_moves(node, data)
+        for move in possible_moves:
+            if valid_move(move, has_sword, data):
+                child = (move, node[1] + 1)
+                if (child[0] not in [node[0] for node in unexplored] and 
+                child[0] not in {node[0] for node in explored}):
+                    unexplored.append(child)
+
+    
+def generate_possible_moves(node, data):
+    '''    
+    This function generates all the possible moves from the current 
+    input tuple, node, that are linear (N, S, W, E) in nature and occur 
+    one grid at a time. Takes the tuple node and dictionary of cave
+    features, data, and returns a list of lists, where each sublist is the 
+    coordinate of a possible 'move.'
+    '''
+    all_moves = [[node[0][0] + 1, node[0][1]], [node[0][0] - 1, node[0][1]], 
+                 [node[0][0], node[0][1] + 1], [node[0][0], node[0][1] - 1]]
+    possible_moves = [tuple(move) for move in all_moves if move[1] in 
+                      range(data['size']) and move[0] in range(data['size'])]
+    
+    return possible_moves
+
+def valid_move(move, has_sword, data):
+    '''
+    This function tests each move individually. It takes the tuple 'move' 
+    , which contains the (row, col) position in the grid, and the variable
+    has_sword which is True if the sword is picked up and False otherwise. 
+    Invalid moves include those entering the adjacent locations of a dragon,
+    or the dragon itself, without a sword present, as well as entering
+    locations containing walls. Returns False if any of these conditions are
+    met and True otherwise.
+    '''
+    # Check for move in a wall or dragon location (without sword)
+    if 'dragon' in data and move == data['dragon'] and not has_sword:
+        return False
+    elif 'walls' in data and move in data['walls']:
+        return False
+    # Check for a move in a location adjacent to the dragon without a sword.
+    elif 'dragon' in data: 
+        # Initialize banned (w/out sword) locations adjacent to dragon
+        dragon_location = data['dragon']
+
+        banned_1 = (dragon_location[0], dragon_location[1] + 1)
+        banned_2 = (dragon_location[0], dragon_location[1] - 1)    
+        banned_3 = (dragon_location[0] + 1, dragon_location[1])
+        banned_4 = (dragon_location[0] + 1, dragon_location[1] - 1)
+        banned_5 = (dragon_location[0] + 1, dragon_location[1] + 1)
+        banned_6 = (dragon_location[0] - 1, dragon_location[1])
+        banned_7 = (dragon_location[0] - 1, dragon_location[1] - 1)    
+        banned_8 = (dragon_location[0] - 1, dragon_location[1] + 1)
+
+        adjacent_locations = [banned_1, banned_2, banned_3, banned_4, banned_5, 
+                             banned_6, banned_7, banned_8]
+        
+        if move in adjacent_locations and not has_sword:
+            return False
+    
+    return True
+    
+
+#####################################################################################
+
+from reference import build_cave, shortest_path
+
+def optimal_path(data):
+    '''   
+    This function takes the input dictionary of cave features, data, and finds
+    the length of the shortest path between the entrance and exit that
+    collects all the treasures. Uses helper functions: generate_locations(), 
+    to dynamically generate destinations to travel towards, and pick_ups,
+    to change the value of has_sword to True, allowing dragon 'combat' and 
+    banned location 'travel' if the destination of the sword is reached.
+    Returns the length of this optimal (shortest) path, using the uniform
+    cost search algorithm.
+    '''
+    # Check for valid cave.
+    if not build_cave(data):
+        return None
+    # Initialize the starting node with the form: (cumulatve_cost, path, cost)
+    cost = 0
+    path = [data['entrance'], ]
+    cumulative_cost = 0
+    node = (cumulative_cost, path, cost)
+    # Initialize the priority with the starting node
+    unexplored = [node, ]
+    # Initialize starting conditions of no sword and no treasures
+    has_sword = False
+    
+    # Iterate until the queue is empty (failure) or a solution is found.
+    while True:
+        # Return None if a solution is not possible. 
+        if not unexplored:
+            return None
+        
+        # Set node to the lowest cumulative cost move in the priority queue
+        unexplored = sorted(unexplored)
+        node = unexplored.pop(0)
+        
+        # If the node is the exit, return the length of the optimal path. 
+        if node[1][-1] == data['exit']:
+            return node[0]
+        
+        # Check whether the sword has been 'picked up.'
+        has_sword = pick_ups(node, data, has_sword)
+        
+        # Create a list of all destinations from the current node.
+        destinations = generate_locations(data, node)
+        
+        # Add all possible destinations and their costs to unexplored
+        for destination in destinations: 
+            if shortest_path(data, node[1][-1], destination, has_sword):
+                # Create variables of the child node.
+                cost = shortest_path(data, node[1][-1], destination, has_sword)
+                path = node[1] + [destination, ]
+                cumulative_cost = node[0] + cost
+                # Create the child node and add to unexplored.
+                child = (cumulative_cost, path, cost)
+                unexplored.append(child)
+                  
+def generate_locations(data, node):
+    '''    
+    Takes inputs: data, a dictionary of cave features, node, the current
+    location (and path, costs etc.) within the cave. Returns a list of 
+    destinaions - sword, treasure(s) - if not all treasures have been picked
+    up and a list containing the exit location (and the sword if not yet
+    visited) otherwise.
+    '''
+    # If there are treasures in the grid, add them as destinations.
+    locations = []
+    if 'treasure' in data:
+        locations += [treasure for treasure in data['treasure']
+                      if treasure not in node[1]]
+    # If all treasures have been collected, add the exit as a destination.
+    if not locations:
+        locations += [data['exit']]
+    # Add the sword as a destination if it is present in the cave.
+    if 'sword' in data and data['sword'] not in node[1]:
+        locations += [data['sword']]
+    
+    return locations
+                      
+def pick_ups(node, data, has_sword):
+    '''
+    This function takes the tuple argument, node, which contains the current
+    location, as well as the dictionary of cave features, data, and the 
+    current status of has_sword (True or False). Returns the value of 
+    has_sword which is set to True if the current node is in a sword location.
+    The default value for has_sword is False, as set in the parent
+    <optimal_cost()> function.
+    '''
+    if 'sword' in data and data['sword'] in node[1]:
+        has_sword = True
+    
+    return has_sword
+
+
+

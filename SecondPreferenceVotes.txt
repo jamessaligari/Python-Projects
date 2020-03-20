@@ -1,0 +1,48 @@
+####################################################################
+
+DATA: 2-Round 2nd Preference Voting Scheme
+
+####################################################################
+
+from collections import defaultdict
+
+def second_preference(votes):
+    ''' 
+    Finds the winner/tie from an election where second preferences are 
+    considered if there is no absolute majority in the first round. Takes an 
+    input list of votes and uses a defaultdict to count first and second 
+    preferences, returning an output string containing the unique winner or
+    tie. A tie is detected if the largest sorted vote_count is equal to the 
+    preceding count in the sort. 
+    '''
+    # Initialize Dictionary & Set of Valid Candidates allowed to be counted.
+    vote_tally = defaultdict(int)
+    valid_candidates = {preference for vote in votes for preference in vote}
+    # Initialize keys for all candidates and count first preferences. 
+    for candidate in valid_candidates:
+        vote_tally[candidate] = 0
+    for vote in votes:
+        vote_tally[vote[0]] += 1
+        
+    # Reallocate lowest_vote candidate's votes if there is no abs majority.
+    if max(vote_tally.values()) <= len(votes) / 2: 
+        lowest_candidate = sorted(vote_tally.items(), key=switch_sort)[0][0]
+        for vote in votes:
+            if vote[0] == lowest_candidate:
+                vote_tally[vote[1]] += 1
+                vote_tally[lowest_candidate] -= 1
+                
+    # Check for winner. Return unique winner/tie.
+    max_v = max(vote_tally.values())
+    if sorted(vote_tally.values())[-1] == sorted(vote_tally.values())[-2]:
+        return 'tie'
+    else:
+        return [candidate for candidate, votes in vote_tally.items() if 
+                votes == max_v][0]
+        
+def switch_sort(tup):
+    ''' 
+    Takes a tuple (candidate, votes) and returns a reordered tuple. Intended to
+    be used for sorting by votes then candidate.
+    '''
+    return tup[1], tup[0]

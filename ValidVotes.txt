@@ -1,0 +1,30 @@
+##################################################################
+
+DATA: VALID VOTES
+
+##################################################################
+
+def is_valid_vote(vote, candidates):
+    '''
+    Checks whether the input vote is valid based on the following
+    conditions: contain only candidates running for election, contain 
+    non-repeating preferences, are strings, contain the correct number of 
+    preferences (same as the no. of candidates), are in the form of lists. It
+    returns False if any of these conditions are violated and True otherwise.
+    '''
+    # First check individual conditions of each preference in each vote.
+    for preference in vote:
+        if preference not in candidates:
+            return False
+        elif vote.count(preference) > 1:
+            return False
+        elif type(preference) != str:
+            return False
+        
+    # Second check whether the vote, itself, is valid, e.g. in length and type.
+    if len(vote) != len(candidates):
+        return False
+    elif type(vote) != list:
+        return False
+    else:
+        return True
